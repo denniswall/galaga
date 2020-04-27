@@ -1,6 +1,7 @@
 import os.path
 import pygame
 from pygame.sprite import Sprite
+import time
 
 from game_stats import GameStats
 from settings import Settings
@@ -42,6 +43,7 @@ class Ship(Sprite):
 
     def blitme(self):
         """Draw the ship at its current location."""
+        
         self.screen.blit(self.image, self.rect)
 
     def update(self, stats: GameStats):
@@ -56,4 +58,20 @@ class Ship(Sprite):
 
     def center_ship(self):
         """Position the ship at center on screen."""
+        
         self.center = float(self.screen_rect.centerx)
+        
+    def explode_ship(self):
+        #print(self)
+        self.image = pygame.image.load('images/explode2.png')
+        size = self.ai_settings.ship_size
+        self.image = pygame.transform.scale(self.image, size)
+        self.screen.blit(self.image, self.rect)
+      
+
+    def reset_ship(self):
+        self.image = pygame.image.load('images/ship1.png')
+        size = self.ai_settings.ship_size
+        self.image = pygame.transform.scale(self.image, size)
+        self.screen.blit(self.image, (0,0))
+    
