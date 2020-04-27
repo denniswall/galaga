@@ -16,7 +16,14 @@ from game_items import GameItems
 from game_stats import GameStats
 from settings import Settings
 from ship import Ship
+from explosion import Explosion
 
+#this may be a way to add laser sounds when you generate a new bullet
+pygame.mixer.init()
+lasersound = pygame.mixer.Sound('laser5.ogg')
+bomb=pygame.mixer.Sound('explosion-03.ogg')
+exp=pygame.mixer.Sound('bomb-02.ogg') #the sound when our ship gets exploded
+pygame.init()
 
 def check_events(ai_settings: Settings, stats: GameStats, game_items: GameItems):
     """Respond to keypresses and mouse events."""
@@ -38,6 +45,7 @@ def check_events(ai_settings: Settings, stats: GameStats, game_items: GameItems)
 
 def quit_game(stats: GameStats):
     """Save the highscore and exit the game."""
+    #maybe save individual high scores and push to a website automatically?
     filename = os.path.join('.', 'save/highscore.txt')
     with open(filename, 'w') as f:
         f.write(str(stats.high_score))
@@ -47,16 +55,18 @@ def quit_game(stats: GameStats):
 def update_screen(ai_settings: Settings, stats: GameStats, game_items: GameItems):
     """Update images on the screen and flip to the new screen."""
 
+        
     # Redraw the screen during each pass through the loop.
     game_items.screen.fill(ai_settings.bg_color)
 
     # Redraw all bullets behind ship and aliens.
     for bullet in game_items.bullets.sprites():
         bullet.draw_bullet()
-
+    
+        
     # Draw ship.
     game_items.ship.blitme()
-
+    
     # Draw alien.
     game_items.aliens.draw(game_items.screen)
 
@@ -77,6 +87,7 @@ def check_keydown_events(event: EventType, ai_settings: Settings
                          , stats: GameStats, game_items: GameItems):
     """Respond when key is being pressed."""
     if event.key == pygame.K_RIGHT:
+        game_items.ship.reset_ship()
         # Move ship to the right.
         game_items.ship.moving_right = True
 
@@ -95,7 +106,7 @@ def check_keydown_events(event: EventType, ai_settings: Settings
 
 
 def check_keyup_events(event: EventType, ship: Ship):
-    """Respond when key is stopped being pressed."""
+    """Respond when key is no longer being pressed."""
     if event.key == pygame.K_RIGHT:
         ship.moving_right = False
     elif event.key == pygame.K_LEFT:
@@ -155,6 +166,7 @@ def check_bullet_alien_collision(ai_settings: Settings, stats: GameStats, game_i
     # Get rid of bullet and aliens that have collided.
     collision = pygame.sprite.groupcollide(game_items.bullets, game_items.aliens, True, True)
     if collision:
+        bomb.play()
         for aliens_hit_list in collision.values():
             stats.score += ai_settings.alien_points * len(aliens_hit_list)
             game_items.sb.prep_score()
@@ -176,16 +188,25 @@ def update_aliens(ai_settings: Settings, stats: GameStats, game_items: GameItems
 
     # Collision between ship and aliens.
     if pygame.sprite.spritecollideany(game_items.ship, game_items.aliens):
+        #good spot to have an explosion
+        
+        
         ship_hit(ai_settings, stats, game_items)
     check_aliens_bottom(ai_settings, stats, game_items)
 
 
 def fire_bullet(ai_settings: Settings, game_items: GameItems):
     """Fire a bullet if limit not reached."""
-
+    
+    #game_items.ship.explode_ship()
+    #resetstuff(ai_settings, GameStats , game_items)
+    #game_items.ship.reset_ship()
     # Create a new bullet and add it to the bullets group.
+    
     if len(game_items.bullets) < ai_settings.bullets_allowed:
+       
         new_bullet = Bullet(ai_settings, game_items.screen, game_items.ship)
+        lasersound.play()
         game_items.bullets.add(new_bullet)
 
 
@@ -262,29 +283,48 @@ def check_fleet_edges(ai_settings: Settings, aliens: Group):
             break
 
 
+def resetstuff(ai_settings: Settings, stats: GameStats, game_items: GameItems):
+     # Update scorecard.
+      game_items.sb.prep_ships()
+      
+      # Empty bullets and aliens.
+      game_items.bullets.empty()
+      game_items.aliens.empty()
+      
+    
+      # Create a new fleet and center the ship.
+      create_fleet(ai_settings, game_items)
+      
+      game_items.ship.center_ship()
+      #game_items.ship.reset_ship()
+      
+      # Pause.
+      time.sleep(0.5)
+      
 def ship_hit(ai_settings: Settings, stats: GameStats, game_items: GameItems):
     """Respond to ship being hit by an alien."""
-
+    
+    
+    
     if stats.ships_left > 0:
 
         # Decrement ships left.
         stats.ships_left -= 1
-
-        # Update scorecard.
-        game_items.sb.prep_ships()
-
-        # Empty bullets and aliens.
-        game_items.bullets.empty()
-        game_items.aliens.empty()
-
-        # Create a new fleet and center the ship.
-        create_fleet(ai_settings, game_items)
-        game_items.ship.center_ship()
-
-        # Pause.
-        time.sleep(0.5)
-
+        game_items.ship.explode_ship()
+        exp.play()
+        
+        
+        
+        #play an explosion sound when the enemy lands on Earth
+        
+        
+        resetstuff(ai_settings, stats, game_items)
+        
+        
     else:
+        #maybe try this? will need to get image and use button.py
+        #check line 53 in game_items.py
+        #game_items.restart_button.draw_button()
         stats.game_active = False
         pygame.mouse.set_visible(True)
 
